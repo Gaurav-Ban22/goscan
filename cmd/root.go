@@ -4,11 +4,13 @@ Copyright © 2023 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"os"
 
+	color "github.com/TwiN/go-color"
 	"github.com/spf13/cobra"
 )
 
@@ -54,6 +56,15 @@ to quickly create a Cobra application.`,
 			return true
 
 		})
+		fmt.Println(color.Ize(color.Green+color.Bold, "Package Name: "+pacName))
+		fmt.Print(color.Ize(color.Green+color.Bold, "Dependencies:"))
+		for _, val := range deps {
+			fmt.Println(color.Ize(color.Green, val.Path.Value))
+		}
+		fmt.Println(color.Ize(color.Green+color.Bold, "Exported:"+fmt.Sprint(exported["Variable"]+exported["Function"])))
+		fmt.Println(color.Ize(color.Green+color.Bold, "Variables:"+fmt.Sprint(exported["Variable"])))
+		fmt.Println(color.Ize(color.Green+color.Bold, "Function:"+fmt.Sprint(exported["Function"])))
+		fmt.Println(color.Ize(color.Green+color.Bold, "Comments:"+fmt.Sprint(len(comments))))
 
 	},
 }
