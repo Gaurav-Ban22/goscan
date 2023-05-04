@@ -14,6 +14,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var module = false
+
+func LoopFiles(amount int, path string) error {
+	chil, err := os.ReadDir(path)
+	if err != nil {
+		return err
+	}
+	for _, val := range chil {
+		if val.IsDir() {
+			LoopFiles(amount, path+"/"+val.Name()) //me when loop to travcerse ast?
+		}
+	}
+}
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "main",
@@ -29,7 +43,7 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		//amqp emsaging protocol
 		fileSet := token.NewFileSet()
-		astre, err := parser.ParseFile(fileSet, args[0], nil, parser.ParseComments)
+		astre, err := parser.ParseFile(fileSet, args[0]+".go", nil, parser.ParseComments)
 		if err != nil {
 			panic(err)
 		}
@@ -38,26 +52,31 @@ to quickly create a Cobra application.`,
 		deps := astre.Imports
 		comments := astre.Comments
 		exported := map[string]int{"Variable": 0, "Function": 0}
-		ast.Inspect(astre, func(n ast.Node) bool {
-			toFind, okay := n.(*ast.Ident) //ast node of all types
-			if okay {
-				if toFind.IsExported() {
-					switch toFind.Obj.Kind {
-					case ast.Var:
-						exported["Variable"]++
-					case ast.Fun:
-						exported["Function"]++
+		if !module {
+			ast.Inspect(astre, func(n ast.Node) bool {
+				toFind, okay := n.(*ast.Ident) //ast node of all types
+				if okay {
+					if toFind.IsExported() {
+						if toFind.Obj == nil {
+							return true
+						}
+						switch toFind.Obj.Kind {
+						case ast.Var:
+							exported["Variable"]++
+						case ast.Fun:
+							exported["Function"]++
+						}
+						fmt.Println(toFind.Obj.Decl)
 					}
 				}
-			} else {
-				return false
-			}
-			//st extend asty to make amcros or travers eto fgind nodes of each part of code experssions
-			return true
+				//st extend asty to make amcros or travers eto fgind nodes of each part of code experssions
+				return true
 
-		})
+			})
+		}
+
 		fmt.Println(color.Ize(color.Green+color.Bold, "Package Name: "+pacName))
-		fmt.Print(color.Ize(color.Green+color.Bold, "Dependencies:"))
+		fmt.Println(color.Ize(color.Green+color.Bold, "Dependencies:"))
 		for _, val := range deps {
 			fmt.Println(color.Ize(color.Green, val.Path.Value))
 		}
@@ -88,4 +107,5 @@ func init() {
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.Flags().BoolVar(&module, "module", false, "module")
 }
