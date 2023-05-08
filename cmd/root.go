@@ -5,46 +5,73 @@ package cmd
 
 import (
 	"fmt"
+	color "github.com/TwiN/go-color"
+	"github.com/spf13/cobra"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"os"
-
-	color "github.com/TwiN/go-color"
-	"github.com/spf13/cobra"
+	"strings"
 )
 
 var module = false
 
-func LoopFiles(path string) (int, []*ast.CommentGroup, []*ast.ImportSpec) {
+func LoopFiles(path string) (int, []*ast.CommentGroup, []*ast.ImportSpec, []string) {
 	chil, err := os.ReadDir(path)
 	if err != nil {
-		return 0, nil, nil
+		return 0, nil, nil, nil
+	}
+	if path == "/" {
+		path = ""
 	}
 	exp := 0
 	var com []*ast.CommentGroup
 	var imp []*ast.ImportSpec
 	var travamnt int = 0
+	var name []string
 
 	for _, val := range chil {
+
 		if val.IsDir() {
 			travamnt++
-			expa, coma, impmqtt := LoopFiles(path + "/" + val.Name()) //me when loop to travcerse ast?\
+			expa, coma, impmqtt, nama := LoopFiles(path + "/" + val.Name()) //me when loop to travcerse ast?\
 			com = append(com, coma...)
 			imp = append(imp, impmqtt...)
+			//always going to be a directory
+			//for _, valas := range name {
+			//	for _, vala := range nama {
+			//		if valas == vala {
+			//			continue
+			//		}
+			//	}
+			//}
+			name = append(name, nama...)
 			exp += expa
 			//for k, v := range expa {
 			//	exp[k] += v
 			//}
 
 		} else {
-			travamnt++
+			valExt := strings.Split(val.Name(), ".")
+			if valExt[len(valExt)-1] != "go" {
+				continue
+			}
+
 			fileSet := token.NewFileSet()
 			astre, _ := parser.ParseFile(fileSet, path+"/"+val.Name(), nil, parser.ParseComments)
 			co := astre.Comments
 			im := astre.Imports
 			com = append(com, co...)
 			imp = append(imp, im...)
+			among := true
+			for _, val := range name {
+				if val == astre.Name.Name {
+					among = false
+				}
+			}
+			if among {
+				name = append(name, astre.Name.Name)
+			}
 
 			ast.Inspect(astre, func(n ast.Node) bool {
 				toFind, okay := n.(*ast.FuncDecl) //ast node of all types
@@ -70,7 +97,7 @@ func LoopFiles(path string) (int, []*ast.CommentGroup, []*ast.ImportSpec) {
 
 	}
 
-	return exp, com, imp
+	return exp, com, imp, name
 }
 
 // rootCmd represents the base command when called without any subcommands
@@ -87,7 +114,7 @@ to quickly create a Cobra application.`,
 	// has an action associated with it:
 	Run: func(cmd *cobra.Command, args []string) {
 		//amqp emsaging protocol
-		pacName := ""
+		var pacName []string
 		var comments []*ast.CommentGroup
 		var deps []*ast.ImportSpec
 		exported := 0 //map[string]int{"Variable": 0, "Function": 0}
@@ -97,7 +124,7 @@ to quickly create a Cobra application.`,
 
 			fileSet := token.NewFileSet()
 			astre, err := parser.ParseFile(fileSet, args[0]+".go", nil, parser.ParseComments)
-			pacName = astre.Name.Name
+			pacName = append(pacName, astre.Name.Name)
 			deps = astre.Imports
 			comments = astre.Comments
 			if err != nil {
@@ -127,14 +154,25 @@ to quickly create a Cobra application.`,
 
 			})
 		} else {
-			_, err := os.ReadDir(args[0])
+			var x string
+			if len(args) == 0 {
+				x = "."
+			} else {
+				x = args[0]
+			}
+			_, err := os.ReadDir(x)
 			if err != nil {
 				panic(err)
 			}
-			exported, comments, deps = LoopFiles(args[0])
+			exported, comments, deps, pacName = LoopFiles(x)
 		}
 
-		fmt.Println(color.Ize(color.Green+color.Bold, "Package Name: "+pacName))
+		fmt.Print(color.Ize(color.Green+color.Bold, "Package Name(s): "))
+		for _, val := range pacName {
+			fmt.Print(color.Ize(color.Green, strings.TrimSpace(val)+" "))
+
+		}
+		fmt.Println()
 		fmt.Println(color.Ize(color.Green+color.Bold, "Dependencies:"))
 		for _, val := range deps {
 			fmt.Println(color.Ize(color.Green, val.Path.Value))
