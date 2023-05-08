@@ -16,12 +16,12 @@ import (
 
 var module = false
 
-func LoopFiles(path string) (map[string]int, []*ast.CommentGroup, []*ast.ImportSpec) {
+func LoopFiles(path string) (int, []*ast.CommentGroup, []*ast.ImportSpec) {
 	chil, err := os.ReadDir(path)
 	if err != nil {
-		return nil, nil, nil
+		return 0, nil, nil
 	}
-	exp := make(map[string]int)
+	exp := 0
 	var com []*ast.CommentGroup
 	var imp []*ast.ImportSpec
 	var travamnt int = 0
@@ -32,9 +32,10 @@ func LoopFiles(path string) (map[string]int, []*ast.CommentGroup, []*ast.ImportS
 			expa, coma, impmqtt := LoopFiles(path + "/" + val.Name()) //me when loop to travcerse ast?\
 			com = append(com, coma...)
 			imp = append(imp, impmqtt...)
-			for k, v := range expa {
-				exp[k] += v
-			}
+			exp += expa
+			//for k, v := range expa {
+			//	exp[k] += v
+			//}
 
 		} else {
 			travamnt++
@@ -44,33 +45,31 @@ func LoopFiles(path string) (map[string]int, []*ast.CommentGroup, []*ast.ImportS
 			im := astre.Imports
 			com = append(com, co...)
 			imp = append(imp, im...)
-			for _, v := range im {
-				fmt.Println(v.Path.Value)
-			}
+
 			ast.Inspect(astre, func(n ast.Node) bool {
-				toFind, okay := n.(*ast.Ident) //ast node of all types
+				toFind, okay := n.(*ast.FuncDecl) //ast node of all types
 				if okay {
-					if toFind.IsExported() {
-						if toFind.Obj == nil {
-							return true
-						}
-						switch toFind.Obj.Kind {
-						case ast.Var:
-							exp["Variable"]++
-						case ast.Fun:
-							exp["Function"]++
-						}
-						fmt.Println(toFind.Obj.Decl)
+					if toFind.Name.IsExported() {
+						//if toFind.Obj == nil {
+						//	return true
+						//}
+						//switch toFind.Obj.Kind {
+						//case ast.Var:
+						//	exp["Variable"]++
+						//case ast.Fun:
+						//	exp["Function"]++
+						//}
+						//fmt.Println(toFind.Obj.Decl)
+						exp++
 					}
 				}
 				//st extend asty to make amcros or travers eto fgind nodes of each part of code experssions
 				return true
 			})
 		}
-		fmt.Println(travamnt)
 
 	}
-	fmt.Println(travamnt)
+
 	return exp, com, imp
 }
 
@@ -91,7 +90,7 @@ to quickly create a Cobra application.`,
 		pacName := ""
 		var comments []*ast.CommentGroup
 		var deps []*ast.ImportSpec
-		exported := map[string]int{"Variable": 0, "Function": 0}
+		exported := 0 //map[string]int{"Variable": 0, "Function": 0}
 		if !module {
 
 			//macro edit ast to do actions extend functionality
@@ -105,19 +104,22 @@ to quickly create a Cobra application.`,
 				panic(err)
 			}
 			ast.Inspect(astre, func(n ast.Node) bool {
-				toFind, okay := n.(*ast.Ident) //ast node of all types
+				toFind, okay := n.(*ast.FuncDecl) //ast node of all types
 				if okay {
-					if toFind.IsExported() {
-						if toFind.Obj == nil {
-							return true
-						}
-						switch toFind.Obj.Kind {
-						case ast.Var:
-							exported["Variable"]++
-						case ast.Fun:
-							exported["Function"]++
-						}
-						fmt.Println(toFind.Obj.Decl)
+					//if toFind.IsExported() {
+					//	if toFind.Obj == nil {
+					//		return true
+					//	}
+					//	switch toFind.Obj.Kind {
+					//	case ast.Var:
+					//		exported["Variable"]++
+					//	case ast.Fun:
+					//		exported["Function"]++
+					//	}
+					//	fmt.Println(toFind.Obj.Decl)
+					//}
+					if toFind.Name.IsExported() {
+						exported++
 					}
 				}
 				//st extend asty to make amcros or travers eto fgind nodes of each part of code experssions
@@ -137,10 +139,10 @@ to quickly create a Cobra application.`,
 		for _, val := range deps {
 			fmt.Println(color.Ize(color.Green, val.Path.Value))
 		}
-		fmt.Println(color.Ize(color.Green+color.Bold, "Exported:"+fmt.Sprint(exported["Variable"]+exported["Function"])))
-		fmt.Println(color.Ize(color.Green+color.Bold, "Variables:"+fmt.Sprint(exported["Variable"])))
-		fmt.Println(color.Ize(color.Green+color.Bold, "Function:"+fmt.Sprint(exported["Function"])))
-		fmt.Println(color.Ize(color.Green+color.Bold, "Comments:"+fmt.Sprint(len(comments))))
+		fmt.Println(color.Ize(color.Green+color.Bold, "Exported: "+fmt.Sprint(exported)))
+		//fmt.Println(color.Ize(color.Green+color.Bold, "Variables:"+fmt.Sprint(exported["Variable"])))
+		//fmt.Println(color.Ize(color.Green+color.Bold, "Function:"+fmt.Sprint(exported["Function"])))
+		fmt.Println(color.Ize(color.Green+color.Bold, "Comments: "+fmt.Sprint(len(comments))))
 
 	},
 }
