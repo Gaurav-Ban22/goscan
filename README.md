@@ -17,7 +17,9 @@ Coming soon! I will release a build and binary for Linux later on.
 > goscan [flags] [path]
 ```
 <h3>Flags</h3>
+
 Flags are optional.
+
 ```bash
 > goscan --module [path]
 ```
