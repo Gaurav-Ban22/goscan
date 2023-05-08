@@ -16,16 +16,62 @@ import (
 
 var module = false
 
-func LoopFiles(amount int, path string) error {
+func LoopFiles(path string) (map[string]int, []*ast.CommentGroup, []*ast.ImportSpec) {
 	chil, err := os.ReadDir(path)
 	if err != nil {
-		return err
+		return nil, nil, nil
 	}
+	exp := make(map[string]int)
+	var com []*ast.CommentGroup
+	var imp []*ast.ImportSpec
+	var travamnt int = 0
+
 	for _, val := range chil {
 		if val.IsDir() {
-			LoopFiles(amount, path+"/"+val.Name()) //me when loop to travcerse ast?
+			travamnt++
+			expa, coma, impmqtt := LoopFiles(path + "/" + val.Name()) //me when loop to travcerse ast?\
+			com = append(com, coma...)
+			imp = append(imp, impmqtt...)
+			for k, v := range expa {
+				exp[k] += v
+			}
+
+		} else {
+			travamnt++
+			fileSet := token.NewFileSet()
+			astre, _ := parser.ParseFile(fileSet, path+"/"+val.Name(), nil, parser.ParseComments)
+			co := astre.Comments
+			im := astre.Imports
+			com = append(com, co...)
+			imp = append(imp, im...)
+			for _, v := range im {
+				fmt.Println(v.Path.Value)
+			}
+			ast.Inspect(astre, func(n ast.Node) bool {
+				toFind, okay := n.(*ast.Ident) //ast node of all types
+				if okay {
+					if toFind.IsExported() {
+						if toFind.Obj == nil {
+							return true
+						}
+						switch toFind.Obj.Kind {
+						case ast.Var:
+							exp["Variable"]++
+						case ast.Fun:
+							exp["Function"]++
+						}
+						fmt.Println(toFind.Obj.Decl)
+					}
+				}
+				//st extend asty to make amcros or travers eto fgind nodes of each part of code experssions
+				return true
+			})
 		}
+		fmt.Println(travamnt)
+
 	}
+	fmt.Println(travamnt)
+	return exp, com, imp
 }
 
 // rootCmd represents the base command when called without any subcommands
@@ -42,17 +88,22 @@ to quickly create a Cobra application.`,
 	// has an action associated with it:
 	Run: func(cmd *cobra.Command, args []string) {
 		//amqp emsaging protocol
-		fileSet := token.NewFileSet()
-		astre, err := parser.ParseFile(fileSet, args[0]+".go", nil, parser.ParseComments)
-		if err != nil {
-			panic(err)
-		}
-		//macro edit ast to do actions extend functionality
-		pacName := astre.Name.Name
-		deps := astre.Imports
-		comments := astre.Comments
+		pacName := ""
+		var comments []*ast.CommentGroup
+		var deps []*ast.ImportSpec
 		exported := map[string]int{"Variable": 0, "Function": 0}
 		if !module {
+
+			//macro edit ast to do actions extend functionality
+
+			fileSet := token.NewFileSet()
+			astre, err := parser.ParseFile(fileSet, args[0]+".go", nil, parser.ParseComments)
+			pacName = astre.Name.Name
+			deps = astre.Imports
+			comments = astre.Comments
+			if err != nil {
+				panic(err)
+			}
 			ast.Inspect(astre, func(n ast.Node) bool {
 				toFind, okay := n.(*ast.Ident) //ast node of all types
 				if okay {
@@ -73,6 +124,12 @@ to quickly create a Cobra application.`,
 				return true
 
 			})
+		} else {
+			_, err := os.ReadDir(args[0])
+			if err != nil {
+				panic(err)
+			}
+			exported, comments, deps = LoopFiles(args[0])
 		}
 
 		fmt.Println(color.Ize(color.Green+color.Bold, "Package Name: "+pacName))
