@@ -25,3 +25,10 @@ Flags are optional.
 ```
 This flag will scan the go files in an entire directory and its subdirectories.
 
+Example when running
+```bash
+> <alias> --module .
+```
+
+![image](https://github.com/Gaurav-Ban22/goscan/assets/69488672/190d18c9-4c8c-408f-836e-420062199f84)
+
